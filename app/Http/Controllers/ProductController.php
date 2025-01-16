@@ -4,103 +4,102 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\CreateProductRequest;
 use App\Http\Requests\UpdateProductRequest;
-use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use App\Http\Resources\ArProductResource;
+use App\Http\Resources\ProductResource;
 use App\Models\Category;
 use App\Models\Product;
+use App\Models\User;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
+use Illuminate\Support\str;
 
 class ProductController extends Controller
 {
     use AuthorizesRequests;
     public function store(CreateProductRequest $request)
     {
-        // Authorize the action
-        $this->authorize('create', Product::class);
-
+        //$this->authorize('create', User::class);
         $data = $request->validated();
-
-        // Handle the product image
-        $image_url = Str::random(32) . "." . $request->image_url->getClientOriginalExtension();
-        Storage::disk('public')->put($image_url, file_get_contents($request->image_url));
-        $data['image_url'] = $image_url;
-
-        // Create the product
+        if ($request->hasFile('image_url')) {
+            $image_url = str::random(32) . "." . $request->image_url->getClientOriginalExtension();
+            Storage::disk('public')->put($image_url, file_get_contents($request->image_url));
+            $data['image_url'] = $image_url;
+        }
         Product::create([
             "store_id" => $request->user()->store->id,
             ...$data
         ]);
-
-        return response()->json(['message' => 'Product created successfully.'], 201);
     }
-
-    public function show(Product $product)
+    public function show($id)
     {
-        // Authorize the view action
-        $this->authorize('view', $product);
-
-        return response()->json($product);
+        $product = Product::find($id);
+        if(Auth::user()->lang=="en")
+        {
+            return response()->json(new ProductResource($product));
+        }
+        else
+        {
+            return response()->json(new ArProductResource($product));
+        }
     }
-
     public function updateProduct(UpdateProductRequest $request, $id)
     {
-        $product = Product::findOrFail($id);
-
-        // Authorize the update action
-        $this->authorize('update', $product);
-
+        $product = Product::find($id);
+        $this->authorize('update', [User::class, $product]);
         $data = $request->validated();
-
-        // Handle the product image
-        if ($request->hasFile('image_url')) {
-            $image_url = Str::random(32) . "." . $request->image_url->getClientOriginalExtension();
+        if($request->hasFile('image_url'))
+        {
+            $image_url = str::random(32) . "." . $request->image_url->getClientOriginalExtension();
             Storage::disk('public')->put($image_url, file_get_contents($request->image_url));
             $data['image_url'] = $image_url;
         }
-
-        // Update the product
         $product->update($data);
-
-        return response()->json(['message' => 'Product updated successfully.']);
     }
-
-    public function destroy(Product $product)
+    public function destroy($id)
     {
-        // Authorize the delete action
-        $this->authorize('delete', $product);
-
+        $product = Product::find($id);
+        $this->authorize('delete', [User::class, $product]);
         $product->delete();
-
-        return response()->json(['message' => 'Product deleted successfully.']);
     }
-
     public function category(string $name)
     {
-        // Authorize viewing all products in a category
-        $this->authorize('viewAny', Product::class);
-
-        $category = Category::where('name', $name)->firstOrFail();
-        $products = $category->products;
-
-        return response()->json($products);
+        if(Auth::user()->lang=="en")
+        {
+            if ($name == "All") {
+                $products = Product::all();
+            } else {
+                $category = Category::where('name', $name)->first();
+                $products = $category->products;
+            }
+            return ProductResource::collection(($products));
+        }
+        if ($name == "الكل") {
+            $products = Product::all();
+        } else {
+            $category = Category::where('name_ar', $name)->first();
+            $products = $category->products;
+        }
+        return ArProductResource::collection(($products));
     }
-
     public function offer()
     {
-        $offers = Product::whereNotNull('discount_value')
-            ->where('discount_start', '<=', now())
-            ->where('discount_end', '>', now())
-            ->latest()
-            ->take(3)
-            ->get();
-
-        return response()->json($offers);
+        $offers = Product::where('discount_value', '!=', null)->where('discount_start', '<=', now())->where('discount_end', '>', now())->latest()->take(3)->get();
+        if(Auth::user()->lang=="en")
+        {
+            return ProductResource::collection(($offers));
+        }
+        return ArProductResource::collection(($offers));
     }
-
     public function priceRange($startRange, $endRange)
     {
-        $products = Product::whereBetween('price', [$startRange, $endRange])->get();
+        $products = Product::where('price', '>=', $startRange)->where('price', '<=', $endRange)->get();
+        if(Auth::user()->lang=="en")
+        {
+            return ProductResource::collection(($products));
+        }
+        return ArProductResource::collection(($products));
 
-        return response()->json($products);
     }
 }

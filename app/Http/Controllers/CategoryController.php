@@ -7,25 +7,37 @@ use App\Models\Category;
 use App\Models\User;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class CategoryController extends Controller
 {
     use AuthorizesRequests;
     public function index()
     {
-        $this->authorize('viewAny',User::class);
-        $categories=Category::all();
-        return $categories;
+        $categories = collect();
+        if (Auth::user()->lang == "en") {
+            $categories->push("All");
+            foreach (Category::all() as $category) {
+                $categories->push($category->name);
+            }
+        } else {
+            $categories->push("الكل");
+            foreach (Category::all() as $category) {
+                $categories->push($category->name_ar);
+            }
+        }
+        return collect($categories)->values();
     }
     public function store(CreateCategoryRequest $request)
     {
-        $this->authorize('create',User::class);
-        $data=$request->validated();
+        $this->authorize('create', User::class);
+        $data = $request->validated();
         Category::create($data);
     }
-    public function destroy(Category $category)
+    public function destroy($id)
     {
-        $this->authorize('delete',[User::class,$category]);
+        $category = Category::find($id);
+        $this->authorize('delete', [User::class, $category]);
         $category->delete();
     }
 }
