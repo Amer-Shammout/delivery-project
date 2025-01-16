@@ -78,28 +78,4 @@ class Product extends Model
     {
         return $this->belongsTo(Category::class);
     }
-
-    public function is_favorite($id)
-    {
-        $user = Auth::user();
-        $is_favorite = Favorite::where('user_id', $user->id)->where('product_id', $id)->get();
-        if (!$is_favorite->isEmpty()) {
-            return true;
-        }
-        return false;
-    }
-    public function is_cart($id)
-    {
-        $user = Auth::user();
-        $cartOrder = Order::where('user_id', $user->id)
-            ->where('order_status', 'cart')
-            ->with('orderItems')->get();
-        $order_items = $cartOrder->flatMap->orderItems;
-        foreach ($order_items as $item) {
-            if ($item['product_id'] == $this->id) {
-                return true;
-            }
-        }
-        return false;
-    }
 }

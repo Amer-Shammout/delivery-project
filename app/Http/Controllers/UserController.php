@@ -224,13 +224,5 @@ class UserController extends Controller
             'orders' => UserOrdersResource::collection($orders)
         ]);
     }
-
-    public function getUserNotifications()
-    {
-        $user = Auth::user();
-        $user->markAllNotificationsAsRead();
-        return response()->json([
-            'Notifications' => NotificationResource::collection($user->notifications),
-        ], 200);
-    }
+    
 }

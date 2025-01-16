@@ -29,7 +29,7 @@ Route::prefix('/auth')->group(function () {
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('users/favorites', [UserController::class, 'favorites']);
     Route::post('users/toggle_favorites', [UserController::class, 'toggle_favorites']);
-    Route::get('users/orders', [UserController::class, 'getUserOrders']);
+    Route::get('users/orders',[UserController::class,'getUserOrders']);
     Route::apiResource('/users', UserController::class);
 });
 Route::middleware(['auth:sanctum'])->group(function () {
@@ -60,23 +60,6 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::patch('/cart/submit', [OrderController::class, 'submitCart']);
 });
 
-// Get the cart orders for a specific user
-Route::get('/cart', [OrderController::class, 'getCart'])->middleware('auth:sanctum');
-
-Route::apiResource('categories', CategoryController::class)->middleware('auth:sanctum');
-
-Route::controller(StoreController::class)->group(function () {
-    Route::get('stores/{id}/categories/{name}', 'ProductsAsCategory')->middleware('auth:sanctum');
-    Route::get('search/{prefix}', 'search')->middleware('auth:sanctum');
-    Route::get('stores/{id}/categories', 'CategoryOfStore')->middleware('auth:sanctum');
-    Route::post('stores/update/{id}', 'updateStore')->middleware('auth:sanctum');
-})->middleware('auth:sanctum');
-Route::apiResource('stores', StoreController::class)->middleware('auth:sanctum');
-
-Route::controller(ProductController::class)->group(function () {
-    Route::post('products/update/{id}', 'updateProduct');
-    Route::get('products/category/{name}', 'category')->middleware('auth:sanctum');
-    Route::get('products.offer', 'offer')->middleware('auth:sanctum');
-    Route::get('products/range/{startRange}/{endRange}', 'priceRange')->middleware('auth:sanctum');
-})->middleware('auth:sanctum');
-Route::apiResource('products', ProductController::class)->middleware('auth:sanctum');
+     // Get the cart orders for a specific user
+     Route::get('/cart', [OrderController::class, 'getCart'])->middleware('auth:sanctum');
+     

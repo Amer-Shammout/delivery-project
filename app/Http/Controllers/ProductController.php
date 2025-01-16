@@ -32,26 +32,24 @@ class ProductController extends Controller
             ...$data
         ]);
     }
-    public function show($id)
+
+    public function show(Product $product)
     {
-        $product = Product::find($id);
-        if(Auth::user()->lang=="en")
-        {
-            return response()->json(new ProductResource($product));
-        }
-        else
-        {
-            return response()->json(new ArProductResource($product));
-        }
+        // Authorize the view action
+        $this->authorize('view', $product);
+
+        return response()->json($product);
     }
+
     public function updateProduct(UpdateProductRequest $request, $id)
     {
         $product = Product::find($id);
         $this->authorize('update', [User::class, $product]);
         $data = $request->validated();
-        if($request->hasFile('image_url'))
-        {
-            $image_url = str::random(32) . "." . $request->image_url->getClientOriginalExtension();
+
+        // Handle the product image
+        if ($request->hasFile('image_url')) {
+            $image_url = Str::random(32) . "." . $request->image_url->getClientOriginalExtension();
             Storage::disk('public')->put($image_url, file_get_contents($request->image_url));
             $data['image_url'] = $image_url;
         }
@@ -65,41 +63,29 @@ class ProductController extends Controller
     }
     public function category(string $name)
     {
-        if(Auth::user()->lang=="en")
-        {
-            if ($name == "All") {
-                $products = Product::all();
-            } else {
-                $category = Category::where('name', $name)->first();
-                $products = $category->products;
-            }
-            return ProductResource::collection(($products));
-        }
-        if ($name == "الكل") {
-            $products = Product::all();
-        } else {
-            $category = Category::where('name_ar', $name)->first();
-            $products = $category->products;
-        }
-        return ArProductResource::collection(($products));
+        // Authorize viewing all products in a category
+        $this->authorize('viewAny', Product::class);
+
+        $category = Category::where('name', $name)->firstOrFail();
+        $products = $category->products;
+
+        return response()->json($products);
     }
     public function offer()
     {
-        $offers = Product::where('discount_value', '!=', null)->where('discount_start', '<=', now())->where('discount_end', '>', now())->latest()->take(3)->get();
-        if(Auth::user()->lang=="en")
-        {
-            return ProductResource::collection(($offers));
-        }
-        return ArProductResource::collection(($offers));
+        $offers = Product::whereNotNull('discount_value')
+            ->where('discount_start', '<=', now())
+            ->where('discount_end', '>', now())
+            ->latest()
+            ->take(3)
+            ->get();
+
+        return response()->json($offers);
     }
     public function priceRange($startRange, $endRange)
     {
-        $products = Product::where('price', '>=', $startRange)->where('price', '<=', $endRange)->get();
-        if(Auth::user()->lang=="en")
-        {
-            return ProductResource::collection(($products));
-        }
-        return ArProductResource::collection(($products));
+        $products = Product::whereBetween('price', [$startRange, $endRange])->get();
 
+        return response()->json($products);
     }
 }
